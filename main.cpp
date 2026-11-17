@@ -9,7 +9,6 @@
 
 bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& partialName, std::wstring& foundedPaths){
         std::wstring searchPath = currentDir + L"\\*";
-        std::wcout << searchPath << std::endl;
 
         WIN32_FIND_DATAW FindData{};
         HANDLE hFind = FindFirstFileW(searchPath.c_str(), &FindData);
@@ -61,13 +60,24 @@ bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& pa
     }
 
 int main() {
-    std::wstring filePartialName = L"SeedPhrase";
+    std::vector<std::wstring> filePartialName = { 
+        L"SeedPhrase",
+        L"password",
+        L"wallet",
+    };
     std::wstring baseDir = L"D:";
     std::wstring foundPath;
-
-    RecursiveSearchFiles(baseDir, filePartialName, foundPath);
-
-    std::wcout << foundPath << std::endl;
+    size_t fPT = filePartialName.size();
+    
+    for (int i = 0; i < fPT; i++){
+        if (RecursiveSearchFiles(baseDir, filePartialName[i], foundPath)){
+            std::wcout << foundPath << std::endl; 
+        } else {
+            std::wcout << "[-] The file containing the {" 
+            << filePartialName[i] 
+            << "} section was not found!" << std::endl;
+        }
+    }
     
     system("PAUSE");
     return 0;
